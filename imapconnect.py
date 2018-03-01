@@ -1,3 +1,5 @@
+#!/usr/bin/python2
+
 import imaplib, argparse, sys, os
 
 argparser = argparse.ArgumentParser(description="Dump IMAP account into .eml files")
