@@ -18,72 +18,80 @@ argparser.add_argument("--rssl", help="connects using ssl on remote server", act
 args = argparser.parse_args()
 
 def doshit(FOLDER):
-	M.select(FOLDER)
-	savefolder = (args.local_folder + "/" + args.username + "/" + FOLDER)
-	try:
-		os.stat(savefolder)
-	except:
-		os.makedirs(savefolder, 0775)
-	rv, data = M.search(None, "ALL")
-	
-	if rv != 'OK':
-		print "No messages found in folder ", FOLDER
-		return
-	
-	for num in data[0].split():
-		rv, data = M.fetch(num, '(RFC822)')
-		if rv != 'OK':
-			print "ERROR getting message: ", num
-			return
-		f = open('%s/%s.eml' %(savefolder, num), 'wb')
-		f.write(data[0][1])
-		f.close
-		
+        M.select(FOLDER)
+        savefolder = (args.local_folder + "/" + args.username + "/" + FOLDER)
+        try:
+                os.stat(savefolder)
+        except:
+                os.makedirs(savefolder, 0775)
+        rv, data = M.search(None, "ALL")
+
+        if rv != 'OK':
+                print "No messages found in folder ", FOLDER
+                return
+
+        for num in data[0].split():
+                rv, data = M.fetch(num, '(RFC822)')
+                if rv != 'OK':
+                        print "ERROR getting message: ", num
+                        return
+                f = open('%s/%s.eml' %(savefolder, num), 'wb')
+                f.write(data[0][1])
+                f.close
+
 def doshitr(FOLDER):
-	M.select(FOLDER)
-	rv, data = M.search(None, "ALL")
-	
-	if rv != 'OK':
-		print "No messages found in folder ", FOLDER
-		return
-	
-	for num in data[0].split():
-		rv, data = M.fetch(num, '(RFC822)')
-		if rv != 'OK':
-			print "ERROR getting message: ", num
-			return
-		RM.append(FOLDER, None, None, data[0][1])
-	
+        M.select(FOLDER)
+        rv, data = M.search(None, "ALL")
+
+        if rv != 'OK':
+                print "No messages found in folder ", FOLDER
+                return
+
+        for num in data[0].split():
+                rv, data = M.fetch(num, '(RFC822)')
+                if rv != 'OK':
+                        print "ERROR getting message: ", num
+                        return
+                try:
+                        RM.create(FOLDER)
+                except:
+                        print "Folder already excists ", FOLDER
+                try:
+                        RM.subscribe(FOLDER)
+                except:
+                        return
+                RM.append(FOLDER, None, None, data[0][1])
+
 
 def main():
-	global M
-	global RM
-	global Remote
-	if args.ssl:
-		print "Connecting to server on SSL"
-		M = imaplib.IMAP4_SSL(args.host, args.port)
-	else:
-		M = imaplib.IMAP4(args.host, args.port)
-	if args.rssl:
-		RM = imaplib.IMAP4_SSL(args.remote_host, args.remote_port)
-		Remote = "True"
-		RM.login(args.remote_username, args.remote_password)
-	elif args.rs:
-		RM = imaplib.IMAP4(args.remote_host, args.remote_port)
-		RM.login(args.remote_username, args.remote_password)
-		Remote = "True"
-	else:
-		Remote = "False"
-	M.login(args.username, args.password)
-	for f in M.list()[1]:
-		fn = f.split(' "')
-		if Remote == False:
-			doshit(fn[2].replace('"',''),)
-		else:
-			doshitr(fn[2].replace('"',''),)
-	M.logout()
-	if Remote == "True":
-		RM.logout()
+        global M
+        global RM
+        global Remote
+        if args.ssl:
+                print "Connecting to server on SSL"
+                M = imaplib.IMAP4_SSL(args.host, args.port)
+        else:
+                M = imaplib.IMAP4(args.host, args.port)
+        if args.rssl:
+                RM = imaplib.IMAP4_SSL(args.remote_host, args.remote_port)
+                Remote = "True"
+                RM.login(args.remote_username, args.remote_password)
+        elif args.rs:
+                RM = imaplib.IMAP4(args.remote_host, args.remote_port)
+                RM.login(args.remote_username, args.remote_password)
+                Remote = "True"
+        else:
+                Remote = "False"
+        M.login(args.username, args.password)
+        for f in M.list()[1]:
+                fn = f.split(' "')
+                if Remote == False:
+                        doshit(fn[2].replace('"',''),)
+                else:
+                        doshitr(fn[2].replace('"',''),)
+        M.logout()
+        if Remote == "True":
+                RM.logout()
 
 if __name__ == "__main__":
-	main()
+        main()
