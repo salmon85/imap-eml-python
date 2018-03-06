@@ -2,6 +2,9 @@
 
 import imaplib, argparse, sys, os
 imaplib._MAXLINE = 40000
+# The above maxline is for the command length,
+# https://www.ietf.org/rfc/rfc2683.txt says this should be 8000 but we are using 40000.
+# This may need to be increased more for larger mailboxes but not recomended.
 
 argparser = argparse.ArgumentParser(description="Dump IMAP account into .eml files")
 argparser.add_argument('-s', dest='host', help="IMAP host, like imap.gmail.com or mail1.ukisp.com", required=True)
