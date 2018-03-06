@@ -18,6 +18,7 @@ argparser.add_argument("--rssl", help="connects using ssl on remote server", act
 args = argparser.parse_args()
 
 def Clone_Local(FOLDER):
+        print ("Cloning folder: ", FOLDER)
         M.select(FOLDER)
         savefolder = (args.local_folder + "/" + args.username + "/" + FOLDER)
         try:
@@ -40,8 +41,9 @@ def Clone_Local(FOLDER):
                 f.close
 
 def Clone_Remote(FOLDER):
+        print ("Cloning folder: ", FOLDER)
         M.select(FOLDER)
-		# Get all Read messages
+                # Get all Read messages
         rv, data = M.search(None, "Seen")
         if rv != 'OK':
                 print "No Read messages found in folder ", FOLDER
@@ -60,7 +62,7 @@ def Clone_Remote(FOLDER):
                 except:
                         return
                 RM.append(FOLDER, '\SEEN', None, data[0][1])
-		rv, data = M.search(None, "UnSeen")
+                rv, data = M.search(None, "UnSeen")
         if rv != 'OK':
                 print "No Unread messages found in folder ", FOLDER
                 return
@@ -77,13 +79,14 @@ def Clone_Remote(FOLDER):
                         RM.subscribe(FOLDER)
                 except:
                         return
-                RM.append(FOLDER, '\UNSEEN', None, data[0][1])
-		
+                RM.append(FOLDER, None, None, data[0][1])
+
 
 def main():
         global M
         global RM
         global Remote
+        print ("Cloning account: ", args.username)
         if args.ssl:
                 print "Connecting to server on SSL"
                 M = imaplib.IMAP4_SSL(args.host, args.port)
