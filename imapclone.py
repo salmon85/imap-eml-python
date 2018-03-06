@@ -17,7 +17,7 @@ argparser.add_argument('-rP', dest='remote_port', help="Remote Server Port", def
 argparser.add_argument("--rssl", help="connects using ssl on remote server", action="store_true")
 args = argparser.parse_args()
 
-def doshit(FOLDER):
+def Clone_Local(FOLDER):
         M.select(FOLDER)
         savefolder = (args.local_folder + "/" + args.username + "/" + FOLDER)
         try:
@@ -39,14 +39,13 @@ def doshit(FOLDER):
                 f.write(data[0][1])
                 f.close
 
-def doshitr(FOLDER):
+def Clone_Remote(FOLDER):
         M.select(FOLDER)
-        rv, data = M.search(None, "ALL")
-
+		# Get all Read messages
+        rv, data = M.search(None, "Seen")
         if rv != 'OK':
-                print "No messages found in folder ", FOLDER
+                print "No Read messages found in folder ", FOLDER
                 return
-
         for num in data[0].split():
                 rv, data = M.fetch(num, '(RFC822)')
                 if rv != 'OK':
@@ -60,8 +59,26 @@ def doshitr(FOLDER):
                         RM.subscribe(FOLDER)
                 except:
                         return
-                RM.append(FOLDER, None, None, data[0][1])
-
+                RM.append(FOLDER, '\SEEN', None, data[0][1])
+		rv, data = M.search(None, "UnSeen")
+        if rv != 'OK':
+                print "No Unread messages found in folder ", FOLDER
+                return
+        for num in data[0].split():
+                rv, data = M.fetch(num, '(RFC822)')
+                if rv != 'OK':
+                        print "ERROR getting message: ", num
+                        return
+                try:
+                        RM.create(FOLDER)
+                except:
+                        print "Folder already excists ", FOLDER
+                try:
+                        RM.subscribe(FOLDER)
+                except:
+                        return
+                RM.append(FOLDER, '\UNSEEN', None, data[0][1])
+		
 
 def main():
         global M
@@ -86,9 +103,9 @@ def main():
         for f in M.list()[1]:
                 fn = f.split(' "')
                 if Remote == False:
-                        doshit(fn[2].replace('"',''),)
+                        Clone_Local(fn[2].replace('"',''),)
                 else:
-                        doshitr(fn[2].replace('"',''),)
+                        Clone_Remote(fn[2].replace('"',''),)
         M.logout()
         if Remote == "True":
                 RM.logout()
