@@ -1,10 +1,7 @@
 #!/usr/bin/python2
 
 import imaplib, argparse, sys, os
-imaplib._MAXLINE = 40000
-# The above maxline is for the command length,
-# https://www.ietf.org/rfc/rfc2683.txt says this should be 8000 but we are using 40000.
-# This may need to be increased more for larger mailboxes but not recomended.
+imaplib._MAXLINE = 1000000
 
 argparser = argparse.ArgumentParser(description="Dump IMAP account into .eml files")
 argparser.add_argument('-s', dest='host', help="IMAP host, like imap.gmail.com or mail1.ukisp.com", required=True)
@@ -22,7 +19,7 @@ args = argparser.parse_args()
 
 def Clone_Local(FOLDER):
         print ("Cloning folder: ", FOLDER)
-        M.select(FOLDER)
+        M.select("\""+FOLDER+"\"")
         savefolder = (args.local_folder + "/" + args.username + "/" + FOLDER)
         try:
                 os.stat(savefolder)
@@ -45,7 +42,10 @@ def Clone_Local(FOLDER):
 
 def Clone_Remote(FOLDER):
         print ("Cloning folder: ", FOLDER)
-        M.select(FOLDER)
+        try:
+                M.select("\""+FOLDER+"\"")
+        except:
+                print("***** ERROR: Unable to select folder " + FOLDER + " *****")
                 # Get all Read messages
         rv, data = M.search(None, "Seen")
         if rv != 'OK':
@@ -57,14 +57,17 @@ def Clone_Remote(FOLDER):
                         print "ERROR getting message: ", num
                         return
                 try:
-                        RM.create(FOLDER)
+                        RM.create("\""+FOLDER+"\"")
                 except:
                         print "Folder already excists ", FOLDER
                 try:
-                        RM.subscribe(FOLDER)
+                        RM.subscribe("\""+FOLDER+"\"")
                 except:
                         return
-                RM.append(FOLDER, '\SEEN', None, data[0][1])
+                try:
+                        RM.append("\""+FOLDER+"\"", '\SEEN', None, data[0][1])
+                except:
+                        print("Issues creating mail in folder " + FOLDER)
                 rv, data = M.search(None, "UnSeen")
         if rv != 'OK':
                 print "No Unread messages found in folder ", FOLDER
@@ -75,14 +78,17 @@ def Clone_Remote(FOLDER):
                         print "ERROR getting message: ", num
                         return
                 try:
-                        RM.create(FOLDER)
+                        RM.create("\""+FOLDER+"\"")
                 except:
                         print "Folder already excists ", FOLDER
                 try:
-                        RM.subscribe(FOLDER)
+                        RM.subscribe("\""+FOLDER+"\"")
                 except:
                         return
-                RM.append(FOLDER, None, None, data[0][1])
+                try:
+                        RM.append("\""+FOLDER+"\"", None, None, data[0][1])
+                except:
+                        print("Issues creating mail in folder " + FOLDER)
 
 
 def main():
