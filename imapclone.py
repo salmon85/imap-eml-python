@@ -117,7 +117,10 @@ def main():
                 if Remote == False:
                         Clone_Local(fn[2].replace('"',''),)
                 else:
-                        Clone_Remote(fn[2].replace('"',''),)
+                        try:
+                                Clone_Remote(fn[2].replace('"',''),)
+                        except:
+                                print("Issues cloning folder: "+fn[2].replace('"',''),)
         M.logout()
         if Remote == "True":
                 RM.logout()
