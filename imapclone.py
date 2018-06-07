@@ -1,6 +1,12 @@
 #!/usr/bin/python2
 
 import imaplib, argparse, sys, os
+try:
+	from tqdm import tqdm
+except:
+	print("Missing tqdm, install with pip install tqdm or pip install --user tqdm")
+	sys.exit(1)
+
 imaplib._MAXLINE = 1000000
 
 argparser = argparse.ArgumentParser(description="Dump IMAP account into .eml files")
@@ -18,112 +24,111 @@ argparser.add_argument("--rssl", help="connects using ssl on remote server", act
 args = argparser.parse_args()
 
 def Clone_Local(FOLDER):
-        print ("Cloning folder: ", FOLDER)
-        M.select("\""+FOLDER+"\"")
-        savefolder = (args.local_folder + "/" + args.username + "/" + FOLDER)
-        try:
-                os.stat(savefolder)
-        except:
-                os.makedirs(savefolder, 0775)
-        rv, data = M.search(None, "ALL")
+		print ("Cloning folder: ", FOLDER)
+		M.select("\""+FOLDER+"\"")
+		savefolder = (args.local_folder + "/" + args.username + "/" + FOLDER)
+		try:
+				os.stat(savefolder)
+		except:
+				os.makedirs(savefolder, 0775)
+		rv, data = M.search(None, "ALL")
 
-        if rv != 'OK':
-                print "No messages found in folder ", FOLDER
-                return
+		if rv != 'OK':
+				print "No messages found in folder ", FOLDER
+				return
 
-        for num in data[0].split():
-                rv, data = M.fetch(num, '(RFC822)')
-                if rv != 'OK':
-                        print "ERROR getting message: ", num
-                        return
-                f = open('%s/%s.eml' %(savefolder, num), 'wb')
-                f.write(data[0][1])
-                f.close
+		for num in tqdm(data[0].split()):
+				rv, data = M.fetch(num, '(RFC822)')
+				if rv != 'OK':
+						print "ERROR getting message: ", num
+						return
+				f = open('%s/%s.eml' %(savefolder, num), 'wb')
+				f.write(data[0][1])
+				f.close
 
 def Clone_Remote(FOLDER):
-        print ("Cloning folder: ", FOLDER)
-        try:
-                M.select("\""+FOLDER+"\"")
-        except:
-                print("***** ERROR: Unable to select folder " + FOLDER + " *****")
-                # Get all Read messages
-        rv, data = M.search(None, "Seen")
-        if rv != 'OK':
-                print "No Read messages found in folder ", FOLDER
-                return
-        for num in data[0].split():
-                rv, data = M.fetch(num, '(RFC822)')
-                if rv != 'OK':
-                        print "ERROR getting message: ", num
-                        return
-                try:
-                        RM.create("\""+FOLDER+"\"")
-                except:
-                        print "Folder already excists ", FOLDER
-                try:
-                        RM.subscribe("\""+FOLDER+"\"")
-                except:
-                        return
-                try:
-                        RM.append("\""+FOLDER+"\"", '\SEEN', None, data[0][1])
-                except:
-                        print("Issues creating mail in folder " + FOLDER)
-                rv, data = M.search(None, "UnSeen")
-        if rv != 'OK':
-                print "No Unread messages found in folder ", FOLDER
-                return
-        for num in data[0].split():
-                rv, data = M.fetch(num, '(RFC822)')
-                if rv != 'OK':
-                        print "ERROR getting message: ", num
-                        return
-                try:
-                        RM.create("\""+FOLDER+"\"")
-                except:
-                        print "Folder already excists ", FOLDER
-                try:
-                        RM.subscribe("\""+FOLDER+"\"")
-                except:
-                        return
-                try:
-                        RM.append("\""+FOLDER+"\"", None, None, data[0][1])
-                except:
-                        print("Issues creating mail in folder " + FOLDER)
+		print ("Cloning folder: ", FOLDER)
+		try:
+				M.select("\""+FOLDER+"\"")
+		except:
+				print("***** ERROR: Unable to select folder " + FOLDER + " *****")
+				# Get all Read messages
+		rv, data = M.search(None, "Seen")
+		if rv != 'OK':
+				print "No Read messages found in folder ", FOLDER
+				return
+		for num in tqdm(data[0].split()):
+				rv, data = M.fetch(num, '(RFC822)')
+				if rv != 'OK':
+						print "ERROR getting message: ", num
+						return
+				try:
+						RM.create("\""+FOLDER+"\"")
+				except:
+						print "Folder already excists ", FOLDER
+				try:
+						RM.subscribe("\""+FOLDER+"\"")
+				except:
+						return
+				try:
+						RM.append("\""+FOLDER+"\"", '\SEEN', None, data[0][1])
+				except:
+						print("Issues creating mail in folder " + FOLDER)
+				rv, data = M.search(None, "UnSeen")
+		if rv != 'OK':
+				print "No Unread messages found in folder ", FOLDER
+				return
+		for num in tqdm(data[0].split()):
+				rv, data = M.fetch(num, '(RFC822)')
+				if rv != 'OK':
+						print "ERROR getting message: ", num
+						return
+				try:
+						RM.create("\""+FOLDER+"\"")
+				except:
+						print "Folder already excists ", FOLDER
+				try:
+						RM.subscribe("\""+FOLDER+"\"")
+				except:
+						return
+				try:
+						RM.append("\""+FOLDER+"\"", None, None, data[0][1])
+				except:
+						print("Issues creating mail in folder " + FOLDER)
 
 
 def main():
-        global M
-        global RM
-        global Remote
-        print ("Cloning account: ", args.username)
-        if args.ssl:
-                print "Connecting to server on SSL"
-                M = imaplib.IMAP4_SSL(args.host, args.port)
-        else:
-                M = imaplib.IMAP4(args.host, args.port)
-        if args.rssl:
-                RM = imaplib.IMAP4_SSL(args.remote_host, args.remote_port)
-                Remote = "True"
-                RM.login(args.remote_username, args.remote_password)
-        elif args.rs:
-                RM = imaplib.IMAP4(args.remote_host, args.remote_port)
-                RM.login(args.remote_username, args.remote_password)
-                Remote = "True"
-        else:
-                Remote = "False"
-        M.login(args.username, args.password)
-        for f in M.list()[1]:
-                fn = f.split(' "')
-                if Remote == False:
-                        Clone_Local(fn[2].replace('"',''),)
-                else:
-                        try:
-                                Clone_Remote(fn[2].replace('"',''),)
-                        except:
-                                print("Issues cloning folder: "+fn[2].replace('"',''),)
-        M.logout()
-        if Remote == "True":
-                RM.logout()
+		global M
+		global RM
+		global Remote
+		if args.ssl:
+			print "Connecting to server on SSL"
+			M = imaplib.IMAP4_SSL(args.host, args.port)
+		else:
+			M = imaplib.IMAP4(args.host, args.port)
+		if args.rssl:
+			Remote = "True"
+			RM = imaplib.IMAP4_SSL(args.remote_host, args.remote_port)
+			RM.login(args.remote_username, args.remote_password)
+		if args.remote_host and args.rssl is None:
+			Remote = "True"
+			RM = imaplib.IMAP4(args.remote_host, args.remote_port)
+			RM.login(args.remote_username, args.remote_password)
+		else:
+			Remote = "False"
+		M.login(args.username, args.password)
+		for f in M.list()[1]:
+			fn = f.split(' "')
+			if args.remote_host:
+				#print ("Cloning account: " + args.username + " to remote server")
+				Clone_Remote(fn[2].replace('"',''),)
+			else:
+				#print ("Cloning account: " + args.username + " to local folder")
+				Clone_Local(fn[2].replace('"',''),)
+		M.logout()
+		if Remote == "True":
+			RM.logout()
 
 if __name__ == "__main__":
-        main()
+		main()
+
