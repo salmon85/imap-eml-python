@@ -35,7 +35,7 @@ jobs:
 
       - name: Build binary
         run: |
-          pyinstaller --onefile --windowed --name imapclone-gui imap_gui_launcher.py
+          pyinstaller --onefile --windowed --name imapclone-gui imapclone-gui.py
 
           if [ "$RUNNER_OS" == "Linux" ]; then
             mkdir -p AppDir/usr/bin
