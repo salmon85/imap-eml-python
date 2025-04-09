@@ -35,7 +35,6 @@ jobs:
 
       - name: Build binary
         run: |
-          mv imapclone.py imapclone_backend.py
           pyinstaller --onefile --windowed --name gui gui.py --add-data "imapclone.py:imapclone.py"  # add imapclone.py into the same folder inside the EXE
 
 
