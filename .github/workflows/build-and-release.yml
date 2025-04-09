@@ -35,7 +35,8 @@ jobs:
 
       - name: Build binary
         run: |
-          pyinstaller --onefile --windowed --name imapclone-gui imapclone-gui.py
+          pyinstaller --onefile --windowed --name imapclone-gui imapclone-gui.py --add-data "imapclone.py:."  # add imapclone.py into the same folder inside the EXE
+
 
           if [ "$RUNNER_OS" == "Linux" ]; then
             mkdir -p AppDir/usr/bin
@@ -47,6 +48,7 @@ jobs:
             echo "Icon=icon" >> AppDir/imapclone-gui.desktop
             echo "Type=Application" >> AppDir/imapclone-gui.desktop
             echo "Categories=Utility;" >> AppDir/imapclone-gui.desktop
+            ln -s usr/bin/imapclone-gui AppDir/AppRun
             ./appimagetool-x86_64.AppImage AppDir imapclone-gui-x86_64.AppImage
           fi
         shell: bash

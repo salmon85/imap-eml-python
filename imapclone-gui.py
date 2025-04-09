@@ -3,6 +3,7 @@ from tkinter import filedialog, messagebox
 import subprocess
 import shlex
 import os
+import sys
 
 def run_imap_clone():
     # Collect inputs
@@ -22,8 +23,14 @@ def run_imap_clone():
         messagebox.showerror("Missing Info", "Please fill in all required fields.")
         return
 
+    # Locate imapclone.py in bundle or locally
+    if getattr(sys, 'frozen', False):
+        script_path = os.path.join(sys._MEIPASS, 'imapclone.py')
+    else:
+        script_path = 'imapclone.py'
+
     # Build command
-    cmd = f"python3 imapclone.py -s {shlex.quote(host)} -P {shlex.quote(port)} -u {shlex.quote(username)} -p {shlex.quote(password)}"
+    cmd = f"{shlex.quote(sys.executable)} {shlex.quote(script_path)} -s {shlex.quote(host)} -P {shlex.quote(port)} -u {shlex.quote(username)} -p {shlex.quote(password)}"
     if ssl:
         cmd += " --ssl"
     cmd += f" -rs {shlex.quote(remote_host_)} -rP {shlex.quote(remote_port_)} -ru {shlex.quote(remote_user_)} -rp {shlex.quote(remote_pass_)}"
