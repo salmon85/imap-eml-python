@@ -40,16 +40,16 @@ jobs:
 
           if [ "$RUNNER_OS" == "Linux" ]; then
             mkdir -p AppDir/usr/bin
-            cp dist/imapclone-gui AppDir/usr/bin/
+            cp dist/gui AppDir/usr/bin/
             cp icon.png AppDir/icon.png
-            echo "[Desktop Entry]" > AppDir/imapclone-gui.desktop
-            echo "Name=IMAP Cloner" >> AppDir/imapclone-gui.desktop
-            echo "Exec=imapclone-gui" >> AppDir/imapclone-gui.desktop
-            echo "Icon=icon" >> AppDir/imapclone-gui.desktop
-            echo "Type=Application" >> AppDir/imapclone-gui.desktop
-            echo "Categories=Utility;" >> AppDir/imapclone-gui.desktop
-            ln -s usr/bin/imapclone-gui AppDir/AppRun
-            ./appimagetool-x86_64.AppImage AppDir imapclone-gui-x86_64.AppImage
+            echo "[Desktop Entry]" > AppDir/gui.desktop
+            echo "Name=IMAP Cloner" >> AppDir/gui.desktop
+            echo "Exec=gui" >> AppDir/gui.desktop
+            echo "Icon=icon" >> AppDir/gui.desktop
+            echo "Type=Application" >> AppDir/gui.desktop
+            echo "Categories=Utility;" >> AppDir/gui.desktop
+            ln -s usr/bin/gui AppDir/AppRun
+            ./appimagetool-x86_64.AppImage AppDir Imapclone-gui-x86_64.AppImage
           fi
         shell: bash
 
@@ -58,8 +58,8 @@ jobs:
         with:
           name: build-${{ matrix.os }}
           path: |
-            dist/imapclone-gui*
-            imapclone-gui-x86_64.AppImage
+            dist/gui*
+            Imapclone-gui-x86_64.AppImage
           if-no-files-found: ignore
 
   release:
