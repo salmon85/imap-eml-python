@@ -55,7 +55,7 @@ A simple cross-platform GUI built with Tkinter is provided to make launching `im
 ### ▶️ How to Use
 
 ```bash
-python3 imapclone-gui.py
+python3 gui.py
 ```
 
 Fill in your source and destination IMAP connection details, then click **Run Clone** to launch the sync process in the background.
