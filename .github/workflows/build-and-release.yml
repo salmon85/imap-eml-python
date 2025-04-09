@@ -1,0 +1,84 @@
+name: Build and Release imapclone-gui
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build:
+    name: Build for Windows, Linux, macOS
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.11
+
+      - name: Install dependencies
+        run: |
+          pip install pyinstaller tqdm
+          if [ "$RUNNER_OS" == "Linux" ]; then
+            sudo apt-get update
+            sudo apt-get install -y fuse libfuse2
+            wget https://github.com/AppImage/AppImageKit/releases/download/13/appimagetool-x86_64.AppImage
+            chmod +x appimagetool-x86_64.AppImage
+          fi
+        shell: bash
+
+      - name: Build binary
+        run: |
+          pyinstaller --onefile --windowed --name imapclone-gui imap_gui_launcher.py
+
+          if [ "$RUNNER_OS" == "Linux" ]; then
+            mkdir -p AppDir/usr/bin
+            cp dist/imapclone-gui AppDir/usr/bin/
+            echo "[Desktop Entry]" > AppDir/imapclone-gui.desktop
+            echo "Name=IMAP Cloner" >> AppDir/imapclone-gui.desktop
+            echo "Exec=imapclone-gui" >> AppDir/imapclone-gui.desktop
+            echo "Type=Application" >> AppDir/imapclone-gui.desktop
+            echo "Categories=Utility;" >> AppDir/imapclone-gui.desktop
+            ./appimagetool-x86_64.AppImage AppDir imapclone-gui-x86_64.AppImage
+          fi
+        shell: bash
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-${{ matrix.os }}
+          path: |
+            dist/imapclone-gui*
+            imapclone-gui-x86_64.AppImage
+          if-no-files-found: ignore
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-artifacts
+
+      - name: Zip release binaries
+        run: |
+          cd release-artifacts
+          for dir in build-*; do
+            zip -r "${dir}.zip" "$dir"
+          done
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          token: ${{ secrets.GH_RELEASE_TOKEN }}
+          files: release-artifacts/*.zip
+          generate_release_notes: true
