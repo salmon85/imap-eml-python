@@ -43,6 +43,7 @@ jobs:
             echo "[Desktop Entry]" > AppDir/imapclone-gui.desktop
             echo "Name=IMAP Cloner" >> AppDir/imapclone-gui.desktop
             echo "Exec=imapclone-gui" >> AppDir/imapclone-gui.desktop
+            echo "Icon=icon" >> AppDir/imapclone-gui.desktop
             echo "Type=Application" >> AppDir/imapclone-gui.desktop
             echo "Categories=Utility;" >> AppDir/imapclone-gui.desktop
             ./appimagetool-x86_64.AppImage AppDir imapclone-gui-x86_64.AppImage
