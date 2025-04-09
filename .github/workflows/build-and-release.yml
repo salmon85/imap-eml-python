@@ -35,7 +35,8 @@ jobs:
 
       - name: Build binary
         run: |
-          pyinstaller --onefile --windowed --name gui gui.py --add-data "imapclone.py:."  # add imapclone.py into the same folder inside the EXE
+          mv imapclone.py imapclone_backend.py
+          pyinstaller --onefile --windowed --name gui gui.py --add-data "imapclone.py:imapclone.py"  # add imapclone.py into the same folder inside the EXE
 
 
           if [ "$RUNNER_OS" == "Linux" ]; then
