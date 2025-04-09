@@ -40,6 +40,7 @@ jobs:
           if [ "$RUNNER_OS" == "Linux" ]; then
             mkdir -p AppDir/usr/bin
             cp dist/imapclone-gui AppDir/usr/bin/
+            cp icon.png AppDir/icon.png
             echo "[Desktop Entry]" > AppDir/imapclone-gui.desktop
             echo "Name=IMAP Cloner" >> AppDir/imapclone-gui.desktop
             echo "Exec=imapclone-gui" >> AppDir/imapclone-gui.desktop
