@@ -2,6 +2,7 @@ import imaplib
 import argparse
 import sys
 import os
+import re
 
 try:
     from tqdm import tqdm
@@ -102,17 +103,20 @@ class IMAPCopy:
         for f in folders:
             print(f.decode())
 
+        folder_pattern = re.compile(r'(?P<flags>\(.*?\)) "(?P<delimiter>.*)" (?P<name>.*)')
+
         for folder in folders:
             try:
                 decoded = folder.decode()
-                # Get the folder name: it's the third element if you split by space max 2 times
-                parts = decoded.split(' ', 2)
-                if len(parts) == 3:
-                    folder_name = parts[2].strip()
-                    # Remove surrounding quotes if present
-                    folder_name = folder_name.strip('"')
-                    if folder_name and folder_name != '.':
+                match = folder_pattern.match(decoded)
+                if match:
+                    raw_name = match.group("name")
+                    # Folder name might be quoted — remove those
+                    folder_name = raw_name.strip('"')
+                    if folder_name and folder_name != ".":
                         self.list.append(folder_name)
+                else:
+                    print(f"Could not parse: {decoded}")
             except Exception as e:
                 print(f"Error parsing folder: {e}")
                 continue
