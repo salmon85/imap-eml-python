@@ -48,24 +48,15 @@ options:
 
 ---
 
-## 🖥️ GUI Launcher (Optional)
-
-A simple cross-platform GUI built with Tkinter is provided to make launching `imapclone.py` easier.
-
-### ▶️ How to Use
-
-```bash
-python3 gui.py
-```
-
+## 🖥️ GUI Launcher
+Launching the script without any arguments will open with a gui.
 Fill in your source and destination IMAP connection details, then click **Run Clone** to launch the sync process in the background.
 
 ### 💡 GUI Features
 
 - No need to use command-line arguments
 - Easy toggles for SSL
-- Runs `imapclone.py` with your inputs
-
+- 
 ---
 
 ### 🖼️ Screenshot
@@ -85,18 +76,6 @@ Below is a screenshot of the GUI:
   ```
 
 Tkinter is included with most Python installations by default.
-
----
-
-## 📁 Project Layout
-
-```
-imap-eml-python/
-├── imapclone.py              # Main script for cloning IMAP servers
-├── imap_gui_launcher.py      # GUI launcher (Tkinter)
-├── image.png                 # GUI screenshot
-└── README.md
-```
 
 ---
 

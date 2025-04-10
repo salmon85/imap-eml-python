@@ -1,4 +1,4 @@
-name: Build and Release imapclone-gui
+name: Build and Release imapclone
 
 on:
   push:
@@ -35,21 +35,26 @@ jobs:
 
       - name: Build binary
         run: |
-          pyinstaller --onefile --windowed --name gui gui.py --add-data "imapclone.py:imapclone.py"  # add imapclone.py into the same folder inside the EXE
+          pyinstaller --onefile --windowed --name imapclone imapclone.py
 
+          mkdir -p output
 
           if [ "$RUNNER_OS" == "Linux" ]; then
             mkdir -p AppDir/usr/bin
-            cp dist/gui AppDir/usr/bin/
+            cp dist/imapclone AppDir/usr/bin/
             cp icon.png AppDir/icon.png
-            echo "[Desktop Entry]" > AppDir/gui.desktop
-            echo "Name=IMAP Cloner" >> AppDir/gui.desktop
-            echo "Exec=gui" >> AppDir/gui.desktop
-            echo "Icon=icon" >> AppDir/gui.desktop
-            echo "Type=Application" >> AppDir/gui.desktop
-            echo "Categories=Utility;" >> AppDir/gui.desktop
-            ln -s usr/bin/gui AppDir/AppRun
-            ./appimagetool-x86_64.AppImage AppDir Imapclone-gui-x86_64.AppImage
+            echo "[Desktop Entry]" > AppDir/imapclone.desktop
+            echo "Name=IMAP Cloner" >> AppDir/imapclone.desktop
+            echo "Exec=imapclone" >> AppDir/imapclone.desktop
+            echo "Icon=icon" >> AppDir/imapclone.desktop
+            echo "Type=Application" >> AppDir/imapclone.desktop
+            echo "Categories=Utility;" >> AppDir/imapclone.desktop
+            ln -s usr/bin/imapclone AppDir/AppRun
+            ./appimagetool-x86_64.AppImage AppDir output/imapclone-x86_64.AppImage
+          elif [ "$RUNNER_OS" == "Windows" ]; then
+            cp dist/imapclone.exe output/
+          elif [ "$RUNNER_OS" == "macOS" ]; then
+            cp dist/imapclone output/
           fi
         shell: bash
 
@@ -57,10 +62,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: build-${{ matrix.os }}
-          path: |
-            dist/gui*
-            Imapclone-gui-x86_64.AppImage
-          if-no-files-found: ignore
+          path: output/*
+          if-no-files-found: error
 
   release:
     name: Create Release
@@ -77,7 +80,9 @@ jobs:
         run: |
           cd release-artifacts
           for dir in build-*; do
-            zip -r "${dir}.zip" "$dir"
+            cd "$dir"
+            zip -r "../${dir}.zip" *
+            cd ..
           done
 
       - name: Create GitHub Release
