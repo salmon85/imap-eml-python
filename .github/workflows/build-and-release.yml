@@ -35,6 +35,7 @@ jobs:
 
       - name: Build binary
         run: |
+          export ARCHFLAGS="-arch x86_64"
           pyinstaller --onefile --windowed --name imapclone imapclone.py
 
           mkdir -p output
