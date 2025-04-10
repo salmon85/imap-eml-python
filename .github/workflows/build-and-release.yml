@@ -51,6 +51,7 @@ jobs:
             echo "Categories=Utility;" >> AppDir/imapclone.desktop
             ln -s usr/bin/imapclone AppDir/AppRun
             ./appimagetool-x86_64.AppImage AppDir output/imapclone-x86_64.AppImage
+            chmod +x output/imapclone-x86_64.AppImage
           elif [ "$RUNNER_OS" == "Windows" ]; then
             cp dist/imapclone.exe output/
           elif [ "$RUNNER_OS" == "macOS" ]; then
