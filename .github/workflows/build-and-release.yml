@@ -81,7 +81,7 @@ jobs:
           cd release-artifacts
           for dir in build-*; do
             cd "$dir"
-            zip -r "../${dir}.zip" *
+            zip -9 -r "../${dir}.zip" *
             cd ..
           done
 
