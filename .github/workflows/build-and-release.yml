@@ -78,12 +78,20 @@ jobs:
         with:
           path: release-artifacts
 
-      - name: Zip release binaries
+      - name: Zip release binaries with custom names
         run: |
           cd release-artifacts
           for dir in build-*; do
+            osname=$(echo "$dir" | cut -d- -f2)
+            case "$osname" in
+              ubuntu*) os="linux" ;;
+              windows*) os="windows" ;;
+              macos*) os="mac" ;;
+              *) os="$osname" ;;
+            esac
+            zipname="imapclone-x86_64.${{ github.ref_name }}.${os}.zip"
             cd "$dir"
-            zip -9 -r "../${dir}.zip" *
+            zip -9 -r "../$zipname" *
             cd ..
           done
 
