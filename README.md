@@ -2,6 +2,12 @@
 
 This project provides tools to clone email from one IMAP server to another using Python. It includes a command-line script (`imapclone.py`) and an optional graphical user interface (`imapclone-gui.py`).
 
+Note: This doesn't work for any email systems that use oauth (gmail.com / outlook.com / live.com). This tool was meant for people whom aren't clued up with transferring the emails. If you're savvy enough to set up oauth, you're going to be savvy enough to transfer these without this tool.
+Workarounds:
+Gmail: Use the add another email account feature. https://support.google.com/mail/answer/21289?hl=en-EN
+Outlook.com: They expect you to export the emails as .eml and then re-upload them to their server via settings > files > import
+
+todo: option in the tool to download rather than clone via imap
 ---
 
 ## 📨 imapclone.py
