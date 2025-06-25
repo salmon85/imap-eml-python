@@ -6,6 +6,8 @@ import argparse
 import threading
 import sys
 import re
+import socket
+socket.setdefaulttimeout(300)
 
 
 class GuiOutput:
@@ -38,41 +40,141 @@ class IMAPCopy:
         self.dest.login(args.remote_username, args.remote_password)
 
     def clone_folder(self, folder):
-        print(f"Cloning folder: {folder}")
+        print(f"\n📁 Cloning folder: {folder}")
         try:
             self.src.select(f'"{folder}"')
         except Exception as e:
             print(f"Issues connecting to folder {folder}: {e}")
             return
 
-        try:
-            self.dest.create(f'"{folder}"')
-        except Exception:
-            print(f"Folder already exists: {folder}")
+        # Get the destination delimiter
+        status, data = self.dest.list('""', 'INBOX')
+        if status == "OK" and data:
+            delimiter_match = re.search(r'\((?:[^)]*)\)\s+"([^"]+)"\s+INBOX', data[0].decode())
+            delimiter = delimiter_match.group(1) if delimiter_match else "/"
+        else:
+            delimiter = "/"
+
+        # Build destination folder path
+        # Only prefix with INBOX if the folder is not already rooted under INBOX or is not INBOX itself
+        if folder.upper() != "INBOX" and not folder.upper().startswith("INBOX" + delimiter):
+            dest_folder = f"INBOX{delimiter}{folder}"
+        else:
+            dest_folder = folder
 
         try:
-            self.dest.subscribe(f'"{folder}"')
-        except Exception:
-            pass
+            self.dest.create(f'"{dest_folder}"')
+        except imaplib.IMAP4.error as e:
+            print(f"⚠️ Could not create folder '{dest_folder}': {e}. Attempting to continue...")
 
-        for flag, label in [("SEEN", "\\Seen"), ("UNSEEN", None)]:
-            print(f"Cloning {flag.lower().capitalize()} Messages")
-            rv, data = self.src.search(None, flag)
-            if rv != "OK":
-                print(f"No messages found in folder: {folder}")
-                continue
-            for message in data[0].split():
-                mrv, mdata = self.src.fetch(message, "(RFC822)")
-                if mrv != "OK":
-                    print(f"Error getting message: {message}")
-                    continue
+        try:
+            self.dest.subscribe(f'"{dest_folder}"')
+        except imaplib.IMAP4.error:
+            pass  # Some servers auto-subscribe; ignore if it fails
+        # Always check response of select()
+        resp, _ = self.dest.select(f'"{dest_folder}"')
+        if resp != "OK":
+            print("⚠️ Destination session dropped or folder not selectable. Reconnecting...")
+            self.dest.logout()
+            if self.args.rssl:
+                self.dest = imaplib.IMAP4_SSL(self.args.remote_host, int(self.args.remote_port))
+            else:
+                self.dest = imaplib.IMAP4(self.args.remote_host, int(self.args.remote_port))
+            self.dest.login(self.args.remote_username, self.args.remote_password)
+            resp, _ = self.dest.select(f'"{dest_folder}"')
+            if resp != "OK":
+                print(f"❌ Failed to select destination folder '{dest_folder}' after reconnect.")
+                return
+
+        BATCH_SIZE = 1000
+
+        # Scan existing Message-IDs in batches
+        status, existing_data = self.dest.search(None, 'ALL')
+        existing_ids = set()
+
+        if status == "OK":
+            all_ids = existing_data[0].split()
+            for batch_start in range(0, len(all_ids), BATCH_SIZE):
+                batch = all_ids[batch_start:batch_start + BATCH_SIZE]
+                id_string = b",".join(batch).decode()
+                print(f"📥 Scanning Message-ID headers {batch_start + 1}–{batch_start + len(batch)} of {len(all_ids)}")
+
                 try:
-                    self.dest.append(f'"{folder}"', label, None, mdata[0][1])
+                    _, msg_data = self.dest.fetch(id_string, "(BODY.PEEK[HEADER.FIELDS (MESSAGE-ID)])")
                 except Exception as e:
-                    print(f"Issues creating mail in folder {folder}: {e}")
-            print()
+                    print(f"❌ Failed to fetch batch of headers: {e}")
+                    continue
+
+                if msg_data:
+                    for item in msg_data:
+                        if not isinstance(item, tuple):
+                            continue
+                        header = item[1].decode(errors='ignore')
+                        match = re.search(r'Message-ID:\s*<([^>]+)>', header, re.IGNORECASE)
+                        if match:
+                            existing_ids.add(match.group(1).strip())
+
+        status, data = self.src.search(None, 'ALL')
+        if status != "OK" or not data or not data[0]:
+            print(f"⚠️ No messages found in source folder '{folder}'")
+            return
+
+        messages = [m for m in data[0].split() if m.decode(errors='ignore').isdigit()]
+        print(f"🔎 Found {len(messages)} messages to process in folder '{folder}'")
+        for batch_start in range(0, len(messages), BATCH_SIZE):
+            batch = messages[batch_start:batch_start + BATCH_SIZE]
+            print(f"\n📦 Processing batch {batch_start + 1}–{batch_start + len(batch)} of {len(messages)}")
+
+            for message in batch:
+                #if int(message.decode()) <= 75510:
+                #    print("🚫 Skipping already processed")
+                #    continue
+                print(f"⏳ Fetching message ID {message.decode()}...")
+                try:
+                    mrv, mdata = self.src.fetch(message, "(RFC822)")
+                except socket.timeout:
+                    print(f"⏱️ Timeout while fetching message {message.decode()}. Skipping...")
+                    continue
+                if mrv != "OK":
+                    print(f"❌ Error getting message: {message.decode()}")
+                    continue
+
+                raw = mdata[0][1]
+                match = re.search(rb'Message-ID:\s*<([^>]+)>', raw, re.IGNORECASE)
+                msgid = match.group(1).decode().strip() if match else None
+
+                if msgid and msgid in existing_ids:
+                    print(f"🔁 Skipping duplicate Message-ID <{msgid}>")
+                    continue
+
+                try:
+                    self.dest.append(f'"{dest_folder}"', None, None, raw)
+                    print(f"✅ Message {message.decode()} appended.")
+                    if msgid:
+                        existing_ids.add(msgid)
+                except (imaplib.IMAP4.abort, imaplib.IMAP4.error, OSError) as e:
+                    print(f"❌ Append failed due to connection error: {e}. Reconnecting...")
+                    try:
+                        self.dest.logout()
+                    except Exception:
+                        pass
+                    if self.args.rssl:
+                        self.dest = imaplib.IMAP4_SSL(self.args.remote_host, int(self.args.remote_port))
+                    else:
+                        self.dest = imaplib.IMAP4(self.args.remote_host, int(self.args.remote_port))
+                    self.dest.login(self.args.remote_username, self.args.remote_password)
+                    self.dest.select(f'"{dest_folder}"')
+
+                    try:
+                        self.dest.append(f'"{dest_folder}"', None, None, raw)
+                        print(f"✅ (Retry) Message {message.decode()} appended.")
+                        if msgid:
+                            existing_ids.add(msgid)
+                    except Exception as e2:
+                        print(f"❌ Final failure appending message {message.decode()}: {e2}")
 
     def clone_all(self, args):
+        self.args = args
         status, folders = self.src.list()
         if status != "OK" or folders is None:
             print("Failed to retrieve folder list.")
@@ -218,6 +320,7 @@ def run_cli():
     parser.add_argument('-rp', dest='remote_password', help="Remote Server Password", required=True)
     parser.add_argument('-rP', dest='remote_port', help="Remote Server Port", default='143')
     parser.add_argument("--rssl", help="Connect using SSL on remote server", action="store_true")
+    parser.add_argument('--from-folder', help="Start cloning from this folder name (inclusive)")
     args = parser.parse_args()
 
     copier = IMAPCopy()
@@ -225,7 +328,6 @@ def run_cli():
     copier.clone_all(args)
 
 
-# Entry point: decide GUI vs CLI
 if __name__ == "__main__":
     if len(sys.argv) == 1:
         run_gui()
