@@ -92,7 +92,7 @@ class IMAPCopy:
         status, existing_data = self.dest.search(None, 'ALL')
         existing_ids = set()
 
-        if status == "OK":
+        if status == "OK" and existing_data and isinstance(existing_data[0], bytes):
             all_ids = existing_data[0].split()
             for batch_start in range(0, len(all_ids), BATCH_SIZE):
                 batch = all_ids[batch_start:batch_start + BATCH_SIZE]
@@ -115,7 +115,7 @@ class IMAPCopy:
                             existing_ids.add(match.group(1).strip())
 
         status, data = self.src.search(None, 'ALL')
-        if status != "OK" or not data or not data[0]:
+        if status != "OK" or not data or data[0] is None or not isinstance(data[0], bytes):
             print(f"⚠️ No messages found in source folder '{folder}'")
             return
 
